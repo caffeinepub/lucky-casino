@@ -1,0 +1,206 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0.1 0.012 270;
+    --foreground: 0.92 0.012 85;
+    --card: 0.14 0.018 270;
+    --card-foreground: 0.92 0.012 85;
+    --popover: 0.14 0.018 270;
+    --popover-foreground: 0.92 0.012 85;
+    --primary: 0.78 0.16 85;
+    --primary-foreground: 0.1 0.012 270;
+    --secondary: 0.2 0.02 270;
+    --secondary-foreground: 0.8 0.01 90;
+    --muted: 0.22 0.02 270;
+    --muted-foreground: 0.55 0.015 270;
+    --accent: 0.52 0.18 150;
+    --accent-foreground: 0.97 0.005 90;
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 0.97 0.005 90;
+    --border: 0.24 0.03 85;
+    --input: 0.22 0.02 270;
+    --ring: 0.78 0.16 85;
+    --radius: 0.75rem;
+    --chart-1: 0.78 0.16 85;
+    --chart-2: 0.52 0.18 150;
+    --chart-3: 0.55 0.22 25;
+    --chart-4: 0.65 0.15 220;
+    --chart-5: 0.7 0.12 60;
+    --sidebar: 0.12 0.015 270;
+    --sidebar-foreground: 0.92 0.012 85;
+    --sidebar-primary: 0.78 0.16 85;
+    --sidebar-primary-foreground: 0.1 0.012 270;
+    --sidebar-accent: 0.18 0.02 270;
+    --sidebar-accent-foreground: 0.92 0.012 85;
+    --sidebar-border: 0.24 0.03 85;
+    --sidebar-ring: 0.78 0.16 85;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: Georgia, "Times New Roman", serif;
+    background-image: radial-gradient(
+        ellipse at 15% 60%,
+        oklch(0.16 0.04 150 / 0.25) 0%,
+        transparent 45%
+      ),
+      radial-gradient(
+        ellipse at 85% 20%,
+        oklch(0.16 0.03 85 / 0.2) 0%,
+        transparent 45%
+      );
+    min-height: 100vh;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 15px oklch(0.78 0.16 85 / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px oklch(0.78 0.16 85 / 0.7), 0 0 80px
+      oklch(0.78 0.16 85 / 0.3);
+  }
+}
+
+@keyframes reel-blur {
+  0% {
+    filter: blur(0px);
+  }
+  20% {
+    filter: blur(3px);
+  }
+  80% {
+    filter: blur(3px);
+  }
+  100% {
+    filter: blur(0px);
+  }
+}
+
+@keyframes win-flash {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes card-deal {
+  from {
+    transform: translateY(-60px) rotate(-5deg);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes spin-wheel {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(1440deg);
+  }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    oklch(0.78 0.16 85) 0%,
+    oklch(0.93 0.1 85) 40%,
+    oklch(0.78 0.16 85) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+
+.glow-gold {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.casino-felt {
+  background: radial-gradient(
+    ellipse at center,
+    oklch(0.25 0.12 150) 0%,
+    oklch(0.18 0.08 150) 60%,
+    oklch(0.14 0.05 150) 100%
+  );
+}
+
+.roulette-red {
+  background: linear-gradient(135deg, oklch(0.45 0.2 25), oklch(0.38 0.18 25));
+}
+
+.roulette-black {
+  background: linear-gradient(
+    135deg,
+    oklch(0.2 0.02 270),
+    oklch(0.15 0.015 270)
+  );
+}
+
+.roulette-green {
+  background: linear-gradient(135deg, oklch(0.4 0.16 150), oklch(0.32 0.14 150));
+}
+
+.roulette-number {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.roulette-number:hover {
+  transform: scale(1.08);
+  z-index: 10;
+  position: relative;
+}
+
+.roulette-number.selected {
+  outline: 2px solid oklch(0.78 0.16 85);
+  box-shadow: 0 0 12px oklch(0.78 0.16 85 / 0.6);
+  transform: scale(1.05);
+}
+
+.roulette-number.winning-cell {
+  animation: win-flash 0.4s ease-in-out 6;
+}
+
+.playing-card {
+  animation: card-deal 0.3s ease-out;
+}
+
+.slot-reel-spinning {
+  animation: reel-blur 0.8s ease-in-out;
+}
+
+.win-glow {
+  animation: glow-pulse 0.6s ease-in-out 3;
+}
