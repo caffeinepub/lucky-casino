@@ -73,6 +73,12 @@ actor {
     name : Text;
   };
 
+  public type WinRates = {
+    slots : Nat;
+    blackjack : Nat;
+    roulette : Nat;
+  };
+
   type CasinoPlayerProfile = {
     chipBalance : Chips;
     totalWinnings : Chips;
@@ -85,9 +91,37 @@ actor {
   let playerProfiles = Map.empty<Principal, CasinoPlayerProfile>();
   let userProfiles = Map.empty<Principal, UserProfile>();
 
+  // Win Rates State (0-100 representing percentage chance of player winning)
+  var slotsWinRate : Nat = 50;
+  var blackjackWinRate : Nat = 50;
+  var rouletteWinRate : Nat = 50;
+
   // Authorization
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
+
+  // Win Rate Functions
+  public query func getWinRates() : async WinRates {
+    {
+      slots = slotsWinRate;
+      blackjack = blackjackWinRate;
+      roulette = rouletteWinRate;
+    };
+  };
+
+  public shared ({ caller }) func setWinRate(gameType : GameType, rate : Nat) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can set win rates");
+    };
+    if (rate > 100) {
+      Runtime.trap("Win rate must be between 0 and 100");
+    };
+    switch (gameType) {
+      case (#slots) { slotsWinRate := rate };
+      case (#blackjack) { blackjackWinRate := rate };
+      case (#roulette) { rouletteWinRate := rate };
+    };
+  };
 
   // User Profile Management (Required by frontend)
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {

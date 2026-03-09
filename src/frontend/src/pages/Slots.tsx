@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useChips } from "../context/ChipContext";
+import { useWinRates } from "../context/WinRateContext";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 const SYMBOLS = ["🍒", "🍋", "🍊", "🍇", "🔔", "7️⃣"];
@@ -42,6 +43,7 @@ export default function Slots() {
   const { identity, loginStatus } = useInternetIdentity();
   const isLoggedIn = loginStatus === "success" && !!identity;
   const { balance, subtractBalance, addBalance } = useChips();
+  const winRates = useWinRates();
 
   const [bet, setBet] = useState("50");
   const [reels, setReels] = useState(["🍒", "🍋", "🍊"]);
@@ -76,7 +78,21 @@ export default function Slots() {
     setSpinning(true);
     setLastResult(null);
 
-    const finalSymbols = [randomSymbol(), randomSymbol(), randomSymbol()];
+    // Apply win rate bias
+    const shouldWin = Math.random() * 100 < winRates.slots;
+    let finalSymbols: string[];
+    if (shouldWin) {
+      const sym = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+      finalSymbols = [sym, sym, sym];
+    } else {
+      do {
+        finalSymbols = [randomSymbol(), randomSymbol(), randomSymbol()];
+      } while (
+        finalSymbols[0] === finalSymbols[1] ||
+        finalSymbols[1] === finalSymbols[2] ||
+        finalSymbols[0] === finalSymbols[2]
+      );
+    }
 
     setSpinningReels([true, true, true]);
     const newReels = [...reels];
@@ -120,7 +136,7 @@ export default function Slots() {
         }
       }, delay);
     });
-  }, [bet, balance, subtractBalance, addBalance, reels]);
+  }, [bet, balance, subtractBalance, addBalance, reels, winRates]);
 
   const setBetPreset = (amount: number | "max") => {
     if (amount === "max") {

@@ -5,6 +5,7 @@ import {
   LogIn,
   LogOut,
   Menu,
+  Settings,
   Spade,
   Trophy,
   User,
@@ -12,9 +13,10 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Page } from "../App";
 import { useChips } from "../context/ChipContext";
+import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 interface LayoutProps {
@@ -51,9 +53,22 @@ function formatChips(n: bigint): string {
 export default function Layout({ children, page, onNavigate }: LayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { login, clear, loginStatus, identity } = useInternetIdentity();
+  const { actor, isFetching } = useActor();
   const { balance } = useChips();
   const isLoggedIn = loginStatus === "success" && !!identity;
   const isLoggingIn = loginStatus === "logging-in";
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!isLoggedIn || !actor || isFetching) {
+      setIsAdmin(false);
+      return;
+    }
+    actor
+      .isCallerAdmin()
+      .then(setIsAdmin)
+      .catch(() => setIsAdmin(false));
+  }, [isLoggedIn, actor, isFetching]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -94,6 +109,21 @@ export default function Layout({ children, page, onNavigate }: LayoutProps) {
                 {item.label}
               </button>
             ))}
+            {isAdmin && (
+              <button
+                type="button"
+                data-ocid="nav.admin.link"
+                onClick={() => onNavigate("admin")}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  page === "admin"
+                    ? "bg-primary/20 text-gold border border-gold/40"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                Admin
+              </button>
+            )}
           </nav>
 
           {/* Right side: balance + login */}
@@ -181,6 +211,23 @@ export default function Layout({ children, page, onNavigate }: LayoutProps) {
                   {item.icon} {item.label}
                 </button>
               ))}
+              {isAdmin && (
+                <button
+                  type="button"
+                  data-ocid="nav.mobile.admin.link"
+                  onClick={() => {
+                    onNavigate("admin");
+                    setMobileOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                    page === "admin"
+                      ? "bg-primary/20 text-gold"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                  }`}
+                >
+                  <Settings className="w-4 h-4" /> Admin
+                </button>
+              )}
               <div className="pt-2 border-t border-border/50">
                 {isLoggedIn ? (
                   <button

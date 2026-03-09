@@ -25,6 +25,11 @@ export interface GameResult {
 export interface UserProfile {
     name: string;
 }
+export interface WinRates {
+    slots: bigint;
+    blackjack: bigint;
+    roulette: bigint;
+}
 export enum GameType {
     blackjack = "blackjack",
     slots = "slots",
@@ -52,8 +57,10 @@ export interface backendInterface {
     getLeaderboard(): Promise<Array<[Principal, bigint]>>;
     getPlayerProfile(player: Principal): Promise<CasinoPlayerProfile | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    getWinRates(): Promise<WinRates>;
     isCallerAdmin(): Promise<boolean>;
     resetPlayerBalance(player: Principal, newBalance: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    setWinRate(gameType: GameType, rate: bigint): Promise<void>;
     spinWheel(): Promise<string>;
 }

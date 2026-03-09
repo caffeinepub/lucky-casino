@@ -4,8 +4,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useChips } from "../context/ChipContext";
+import { useWinRates } from "../context/WinRateContext";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useSpinWheel } from "../hooks/useQueries";
 
 const RED_NUMBERS = new Set([
   1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36,
@@ -68,7 +68,7 @@ export default function Roulette() {
   const { identity, loginStatus } = useInternetIdentity();
   const isLoggedIn = loginStatus === "success" && !!identity;
   const { balance, subtractBalance, addBalance } = useChips();
-  const spinWheel = useSpinWheel();
+  const winRates = useWinRates();
 
   const [placedBets, setPlacedBets] = useState<PlacedBet[]>([]);
   const [betAmount, setBetAmount] = useState(10);
@@ -118,48 +118,61 @@ export default function Roulette() {
     setWinNumber(null);
     setWheelRotation((prev) => prev + 1440 + Math.random() * 360);
 
-    try {
-      const result = await spinWheel.mutateAsync();
-      const num = Number.parseInt(result, 10);
-
-      setTimeout(() => {
-        setWinNumber(num);
-        setSpinning(false);
-
-        let totalWin = 0n;
-        for (const bet of placedBets) {
-          if (checkWin(bet.betType, num)) {
-            const mult = getMultiplier(bet.betType);
-            const betBig = BigInt(bet.amount);
-            totalWin += betBig + betBig * mult;
-          }
-        }
-
-        if (totalWin > 0n) {
-          addBalance(totalWin);
-          toast.success(
-            `🎡 Ball landed on ${num} (${getColor(num)})! Won ${formatChips(totalWin)} chips!`,
-            { duration: 5000 },
-          );
-        } else {
-          toast.error(
-            `Ball landed on ${num} (${getColor(num)}). No winning bets.`,
-          );
-        }
-        setPlacedBets([]);
-      }, 3000);
-    } catch {
-      setSpinning(false);
-      addBalance(totalBig);
-      toast.error("Spin failed. Bets refunded.");
+    // Determine win number using win rate bias
+    const shouldWin = Math.random() * 100 < winRates.roulette;
+    let num: number;
+    if (shouldWin && placedBets.length > 0) {
+      const firstBet = placedBets[0];
+      if (firstBet.betType.type === "number") {
+        num = firstBet.betType.value;
+      } else if (firstBet.betType.type === "color") {
+        const colorNums = Array.from({ length: 36 }, (_, i) => i + 1).filter(
+          (n) => getColor(n) === firstBet.betType.value,
+        );
+        num = colorNums[Math.floor(Math.random() * colorNums.length)];
+      } else {
+        const parNums = Array.from({ length: 36 }, (_, i) => i + 1).filter(
+          (n) => (firstBet.betType.value === "odd" ? n % 2 !== 0 : n % 2 === 0),
+        );
+        num = parNums[Math.floor(Math.random() * parNums.length)];
+      }
+    } else {
+      num = Math.floor(Math.random() * 37); // 0-36
     }
+
+    setTimeout(() => {
+      setWinNumber(num);
+      setSpinning(false);
+
+      let totalWin = 0n;
+      for (const bet of placedBets) {
+        if (checkWin(bet.betType, num)) {
+          const mult = getMultiplier(bet.betType);
+          const betBig = BigInt(bet.amount);
+          totalWin += betBig + betBig * mult;
+        }
+      }
+
+      if (totalWin > 0n) {
+        addBalance(totalWin);
+        toast.success(
+          `🎡 Ball landed on ${num} (${getColor(num)})! Won ${formatChips(totalWin)} chips!`,
+          { duration: 5000 },
+        );
+      } else {
+        toast.error(
+          `Ball landed on ${num} (${getColor(num)}). No winning bets.`,
+        );
+      }
+      setPlacedBets([]);
+    }, 3000);
   }, [
     placedBets,
     totalBetAmount,
     balance,
     subtractBalance,
     addBalance,
-    spinWheel,
+    winRates,
   ]);
 
   return (

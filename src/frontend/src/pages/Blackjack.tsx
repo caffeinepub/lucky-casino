@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useChips } from "../context/ChipContext";
+import { useWinRates } from "../context/WinRateContext";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 type Suit = "♠" | "♥" | "♦" | "♣";
@@ -146,6 +147,7 @@ export default function Blackjack() {
   const { identity, loginStatus } = useInternetIdentity();
   const isLoggedIn = loginStatus === "success" && !!identity;
   const { balance, subtractBalance, addBalance } = useChips();
+  const winRates = useWinRates();
 
   const [gameState, setGameState] = useState<GameState>("betting");
   const [deck, setDeck] = useState<Card[]>([]);
@@ -250,24 +252,41 @@ export default function Blackjack() {
     const playerTotal = handTotal(playerHand);
     const dealerTotal = handTotal(finalDealerHand);
 
+    // Determine natural result
     let result: GameOutcome;
     if (isBust(finalDealerHand) || playerTotal > dealerTotal) {
       result = "win";
+    } else if (dealerTotal > playerTotal) {
+      result = "loss";
+    } else {
+      result = "tie";
+    }
+
+    // Apply win rate bias (skip ties)
+    if (result !== "tie") {
+      const shouldWin = Math.random() * 100 < winRates.blackjack;
+      if (result === "win" && !shouldWin) {
+        result = "loss";
+      } else if (result === "loss" && shouldWin) {
+        result = "win";
+      }
+    }
+
+    // Resolve balance
+    if (result === "win") {
       const payout = currentBet * 2n;
       addBalance(payout);
       toast.success(`🎉 You win! Won ${formatChips(currentBet)} chips!`);
-    } else if (dealerTotal > playerTotal) {
-      result = "loss";
+    } else if (result === "loss") {
       toast.error(`Dealer wins. Lost ${formatChips(currentBet)} chips.`);
     } else {
-      result = "tie";
       addBalance(currentBet);
       toast.success("It's a tie! Bet returned.");
     }
 
     setOutcome(result);
     setGameState("done");
-  }, [deck, dealerHand, playerHand, currentBet, addBalance]);
+  }, [deck, dealerHand, playerHand, currentBet, addBalance, winRates]);
 
   const newGame = () => {
     setGameState("betting");
