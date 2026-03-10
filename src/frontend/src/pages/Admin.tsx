@@ -1,8 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Lock, Shield, ShieldAlert } from "lucide-react";
-import { motion } from "motion/react";
+import {
+  KeyRound,
+  Loader2,
+  Lock,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { GameType } from "../backend";
@@ -24,6 +31,11 @@ export default function Admin() {
   const [roulette, setRoulette] = useState("50");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Claim admin state
+  const [claimToken, setClaimToken] = useState("");
+  const [claiming, setClaiming] = useState(false);
+  const [claimExpanded, setClaimExpanded] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn || !actor || isFetching) return;
@@ -74,6 +86,34 @@ export default function Admin() {
       toast.error("Failed to save win rates.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleClaimAdmin = async () => {
+    if (!actor || !claimToken.trim()) return;
+    const a = actor as any;
+    setClaiming(true);
+    try {
+      await a._initializeAccessControlWithSecret(claimToken.trim());
+      toast.success("Admin access granted! Refreshing...");
+      // Re-check admin status
+      const admin = await actor.isCallerAdmin();
+      setIsAdmin(admin);
+      if (admin) {
+        setLoading(true);
+        a.getWinRates()
+          .then((r: { slots: bigint; blackjack: bigint; roulette: bigint }) => {
+            setSlots(String(r.slots));
+            setBlackjack(String(r.blackjack));
+            setRoulette(String(r.roulette));
+          })
+          .catch(() => {})
+          .finally(() => setLoading(false));
+      }
+    } catch {
+      toast.error("Invalid token or already claimed");
+    } finally {
+      setClaiming(false);
     }
   };
 
@@ -133,18 +173,103 @@ export default function Admin() {
             </p>
           </div>
         ) : isAdmin === false ? (
-          <div
-            data-ocid="admin.access_denied.error_state"
-            className="rounded-2xl border border-destructive/40 bg-ruby/10 p-8 text-center space-y-3"
-          >
-            <ShieldAlert className="w-10 h-10 text-destructive mx-auto" />
-            <p className="font-display font-bold text-lg text-destructive">
-              Access Denied
-            </p>
-            <p className="text-muted-foreground text-sm">
-              Your account does not have admin privileges. Contact the casino
-              owner to request access.
-            </p>
+          <div className="space-y-4">
+            {/* Access Denied */}
+            <div
+              data-ocid="admin.access_denied.error_state"
+              className="rounded-2xl border border-destructive/40 bg-ruby/10 p-8 text-center space-y-3"
+            >
+              <ShieldAlert className="w-10 h-10 text-destructive mx-auto" />
+              <p className="font-display font-bold text-lg text-destructive">
+                Access Denied
+              </p>
+              <p className="text-muted-foreground text-sm">
+                Your account does not have admin privileges. Contact the casino
+                owner to request access.
+              </p>
+            </div>
+
+            {/* Claim Admin Access */}
+            <div className="rounded-2xl border border-gold/20 bg-card overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setClaimExpanded((v) => !v)}
+                className="w-full flex items-center justify-between px-6 py-4 hover:bg-gold/5 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <KeyRound className="w-5 h-5 text-gold/70" />
+                  <span className="font-display font-semibold text-sm text-foreground/80">
+                    Claim Admin Access
+                  </span>
+                </div>
+                <motion.span
+                  animate={{ rotate: claimExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-muted-foreground text-xs"
+                >
+                  ▼
+                </motion.span>
+              </button>
+
+              <AnimatePresence>
+                {claimExpanded && (
+                  <motion.div
+                    key="claim-panel"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <div className="px-6 pb-6 space-y-4 border-t border-gold/10 pt-4">
+                      <p className="text-muted-foreground text-xs">
+                        If you have the casino admin token, enter it below to
+                        claim admin privileges for your account.
+                      </p>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="admin-token"
+                          className="text-foreground/80 text-sm font-medium"
+                        >
+                          Admin Token
+                        </Label>
+                        <Input
+                          id="admin-token"
+                          data-ocid="admin.claim_token.input"
+                          type="password"
+                          placeholder="Enter admin token"
+                          value={claimToken}
+                          onChange={(e) => setClaimToken(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleClaimAdmin();
+                          }}
+                          disabled={claiming}
+                          className="bg-secondary border-border/60 text-foreground"
+                        />
+                      </div>
+                      <Button
+                        data-ocid="admin.claim.primary_button"
+                        onClick={handleClaimAdmin}
+                        disabled={claiming || !claimToken.trim()}
+                        className="w-full bg-gold hover:bg-gold-light text-primary-foreground font-bold font-display rounded-xl shadow-gold"
+                      >
+                        {claiming ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Claiming...
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4" />
+                            Claim Admin
+                          </span>
+                        )}
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         ) : (
           <div className="rounded-2xl border border-gold/30 bg-card shadow-gold-lg overflow-hidden">
